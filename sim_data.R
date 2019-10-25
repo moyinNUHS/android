@@ -4,6 +4,7 @@
 # Based on the simulation setting used in Zhang et al. 2013 https://academic.oup.com/biomet/article-abstract/100/3/681/303040, Section 5
 
 expit <- function(x) { exp(x) / (1 + exp(x)) } #inverse logit
+
 set.seed(1234)
 
 #Parameters
@@ -14,10 +15,8 @@ n = 1000      #number of patients
 #.......................................................#
 
 ##Baseline
-A0 = rep(1, n)                                        # Start treatment for everyone
-# L =  rbeta(n, shape1 = 2, shape2 = 2)                  # baseline characteristics: comobidities score
-# C0 = rbeta(n, shape1 = 3, shape2 = 2) + 0.15 * L        # Time varying covariate: disease severity score
-L =  rnorm(n, mean = 1, sd = 0.5)                  # baseline characteristics: comobidities score
+A0 = rep(1, n)                                      # Start treatment for everyone
+L =  rnorm(n, mean = 1, sd = 0.5)                   # Baseline characteristics: comobidities score
 C0 = rnorm(n, mean = 2, sd = 0.2) + 0.15 * L        # Time varying covariate: disease severity score
 
 ##Time varying, t=1 
@@ -80,6 +79,6 @@ d = cbind.data.frame(id = 1:n, #ID
                      A2 = A2, 
                      Y = Y)  #Outcome
 
-mean(Y[which(A1==1 & A2 ==1)]) #mortality in the regime 111
-mean(Y[which(A1==1 & A2 ==0)]) #mortality in the regime 110
-mean(Y[which(A1==0 & A2 ==0)]) #mortality in the regime 100
+mean(Y[which(A1==1 & A2 ==1)]) #severity score in the regime 111
+mean(Y[which(A1==1 & A2 ==0)]) #severity score in the regime 110
+mean(Y[which(A1==0 & A2 ==0)]) #severity score in the regime 100
