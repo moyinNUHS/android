@@ -8,7 +8,7 @@ expit <- function(x) { exp(x) / (1 + exp(x)) } #inverse logit
 set.seed(1234)
 
 #Parameters
-n = 1000      #number of patients
+n = 100000      #number of patients
 
 #.......................................................#
 #....................Data generation....................#

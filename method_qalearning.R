@@ -1,5 +1,6 @@
 ########Q and A learning doubly robust #########
 ################################################
+rm(list = ls())
 source('sim_data.R')
 
 #Based on the method proposed by Zhang et al 2013 
@@ -16,33 +17,33 @@ moPropen <- buildModelObj(model = ~ 1,
 moPropen <- list(moPropen, moPropen)
 
 # outcome model second stage
-### Specify the covariates of the main effects component of the outcome regression model
-moMain2 <- buildModelObj(model = ~L,
+### specify the covariates of the main effects component of the outcome regression model
+moMain2 <- buildModelObj(model = ~A1+C1+C2,
                          solver.method = 'lm')
-### Specify the covariates of the contrasts component of the outcome regression model
-moCont2 <- buildModelObj(model = ~C0,
+### specify the covariates of the contrasts component of the outcome regression model
+moCont2 <- buildModelObj(model = ~C2,
                          solver.method = 'lm')
 
 # outcome model first stage
-moMain1 <- buildModelObj(model = ~L+C0,
+moMain1 <- buildModelObj(model = ~L+C1,
                          solver.method = 'lm')
-moCont1 <- buildModelObj(model = ~race + parentBMI+baselineBMI,
+moCont1 <- buildModelObj(model = ~C1,
                          solver.method = 'lm')
 moMain <- list(moMain1, moMain2)
 moCont <- list(moCont1, moCont2)
 
 # regime function second stage
 regime2 <- function(eta1, eta2, data) {
-  tst <- {d$C2 > eta2}
-  rec <- rep('MR', nrow(x = data))
-  rec[!tst] <- 'CD'
+  tst <- {data$C1 > eta1} & {data$C2 <= eta2}
+  rec <- rep('0', nrow(x = data))
+  rec[!tst] <- '1'
   return( rec )
 }
 # regime function first stage
-regime1 <- function(eta1, eta2, data) {
-  tst <- {d$C1 > eta1} & {d$C1 > eta2}
-  rec <- rep('MR', nrow(x = data))
-  rec[!tst] <- 'CD'
+regime1 <- function(eta1, data) {
+  tst <-  {d$C1 <= eta1}
+  rec <- rep('0', nrow(x = data))
+  rec[!tst] <- '1'
   return( rec )
 }
 regimes <- list(regime1, regime2)
@@ -51,9 +52,9 @@ regimes <- list(regime1, regime2)
 fit_AIPW <- optimalSeq(moPropen = moPropen,
                        moMain = moMain, moCont = moCont,
                        regimes = regimes,
-                       data = bmiData, response = Y, txName = c('A1','A2'),
-                       Domains = cbind(rep(0,4),rep(100,4)),
-                       pop.size = nrow(d), starting.values = rep(25,4))
+                       data = d, response = Y, txName = c('A1','A2'),
+                       Domains = cbind(rep(1,3),rep(4,3)),
+                       pop.size = n, starting.values = rep(2.5,3))
 
 ##Available methods
 # Coefficients of the regression objects
