@@ -81,7 +81,7 @@ d = cbind.data.frame(id = 1:n, #ID
 
 if (length(which(A1==1 & A2 ==1)) + length(which(A1==1 & A2 ==0)) + length(which(A1==0 & A2 ==0)) ==n) {
   print(paste(length(which(A1==1 & A2 ==1)), 'out of' , n, 'had regime A0=1, A1=1, A2=1'))
-  print(paste(length(which(A1==1 & A2 ==0)), 'out of' , n, 'had regime A0=1, A1=0, A2=1'))
+  print(paste(length(which(A1==1 & A2 ==0)), 'out of' , n, 'had regime A0=1, A1=1, A2=0'))
   print(paste(length(which(A1==0 & A2 ==0)), 'out of' , n, 'had regime A0=1, A1=0, A2=0'))
 } else {
   print ('Some patients have regimes that are not A1=0/A2=0, A1=1/A2=0, A1=1/A2=1')
