@@ -8,7 +8,7 @@ expit <- function(x) { exp(x) / (1 + exp(x)) } #inverse logit
 set.seed(1234)
 
 #Parameters
-n = 100000      #number of patients
+n = 1000      #number of patients
 
 #.......................................................#
 #....................Data generation....................#
@@ -58,7 +58,7 @@ A2[which(A1 == 0)] = 0 #those who had antibiotics stopped at t=1 should have 0 i
 # Y is generated such that optimal regime is the following:
 # If C1<=1.55 -> Stop treatment i.e. A1=0,A2=0,
 # If C1>1.55 & C2<=2.55 -> Stop treatment i.e. A2=0, and
-# If C1>1.55 & C2>2.55 -> Keep treamtment
+# If C1>1.55 & C2>2.55 -> Keep treatment
 # Y depends on C1, A1, C2, A2
 # Y = 2 + 0.6*C1 + (1-A1)*|C1 - 1.5|*{1(C1 - 1.5 > 0) - A1}^2 + A1*(1-A2)*|C2 - 2.5|*{1(C2 - 2.5 > 0) - A2}^2\
 #     + 0.05*A1 + 0.05*A1*A2
@@ -78,6 +78,10 @@ d = cbind.data.frame(id = 1:n, #ID
                      A1 = A1, 
                      A2 = A2, 
                      Y = Y)  #Outcome
+
+d$A0=ifelse(d$A0==1, 'cont', 'stop')
+d$A1=ifelse(d$A1==1, 'cont', 'stop')
+d$A2=ifelse(d$A2==1, 'cont', 'stop')
 
 if (length(which(A1==1 & A2 ==1)) + length(which(A1==1 & A2 ==0)) + length(which(A1==0 & A2 ==0)) ==n) {
   print(paste(length(which(A1==1 & A2 ==1)), 'out of' , n, 'had regime A0=1, A1=1, A2=1'))

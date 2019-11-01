@@ -35,22 +35,22 @@ moCont <- list(moCont1, moCont2)
 # regime function second stage
 regime2 <- function(eta1, eta2, data) {
   tst <- {data$C1 > eta1} & {data$C2 <= eta2}
-  rec <- rep('0', nrow(x = data))
-  rec[!tst] <- '1'
+  rec <- rep('stop', nrow(x = data))
+  rec[!tst] <- 'cont'
   return( rec )
 }
 # regime function first stage
 regime1 <- function(eta1, data) {
-  tst <-  {d$C1 <= eta1}
-  rec <- rep('0', nrow(x = data))
-  rec[!tst] <- '1'
+  tst <-  {data$C1 <= eta1}
+  rec <- rep('stop', nrow(x = data))
+  rec[!tst] <- 'cont'
   return( rec )
 }
 regimes <- list(regime1, regime2)
 
 #### Analysis using AIPW
 fit_AIPW <- optimalSeq(moPropen = moPropen,
-                       moMain = moMain, moCont = moCont,
+                       moMain = NULL, moCont = NULL,
                        regimes = regimes,
                        data = d, response = Y, txName = c('A1','A2'),
                        Domains = cbind(rep(1,3),rep(4,3)),
@@ -71,7 +71,7 @@ genetic(object = fit_AIPW)
 # Estimated optimal treatment and decision functions for training data
 optTx(x = fit_AIPW)
 # Estimated optimal treatment and decision functions for new data
-optTx(x = fit_AIPW, newdata = bmiData)
+optTx(x = fit_AIPW, newdata = d)
 # Value object returned by outcome regression method
 outcome(object = fit_AIPW)
 # Plots if defined by regression methods
