@@ -18,23 +18,24 @@ moPropen <- list(moPropen, moPropen)
 
 # outcome model second stage
 ### specify the covariates of the main effects component of the outcome regression model
-moMain2 <- buildModelObj(model = ~A1+C1+C2,
+moMain2 <- buildModelObj(model = ~ A1,
                          solver.method = 'lm')
 ### specify the covariates of the contrasts component of the outcome regression model
 moCont2 <- buildModelObj(model = ~C2,
                          solver.method = 'lm')
 
 # outcome model first stage
-moMain1 <- buildModelObj(model = ~L+C1,
+moMain1 <- buildModelObj(model = ~C1,
                          solver.method = 'lm')
-moCont1 <- buildModelObj(model = ~C1,
+moCont1 <- buildModelObj(model = ~ C2,
                          solver.method = 'lm')
+
 moMain <- list(moMain1, moMain2)
 moCont <- list(moCont1, moCont2)
 
 # regime function second stage
-regime2 <- function(eta1, eta2, data) {
-  tst <- {data$C1 > eta1} & {data$C2 <= eta2}
+regime2 <- function(eta2, data) {
+  tst <- {data$C2 <= eta2}
   rec <- rep('stop', nrow(x = data))
   rec[!tst] <- 'cont'
   return( rec )
@@ -50,11 +51,11 @@ regimes <- list(regime1, regime2)
 
 #### Analysis using AIPW
 fit_AIPW <- optimalSeq(moPropen = moPropen,
-                       moMain = NULL, moCont = NULL,
+                       moMain = moMain, moCont = moCont,
                        regimes = regimes,
                        data = d, response = Y, txName = c('A1','A2'),
-                       Domains = cbind(rep(1,3),rep(4,3)),
-                       pop.size = n, starting.values = rep(2.5,3))
+                       Domains = cbind(rep(30,2),rep(90,2)),
+                       pop.size = n, starting.values = rep(40,2))
 
 ##Available methods
 # Coefficients of the regression objects
@@ -85,3 +86,5 @@ propen(object = fit_AIPW)
 show(object = fit_AIPW)
 # Show summary results of method
 summary(object = fit_AIPW)
+#estimated values for eta 
+regimeCoef(object = fit_AIPW)
