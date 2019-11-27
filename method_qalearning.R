@@ -9,25 +9,30 @@ library('DynTxRegime')
 
 # Define the propensity for treatment model and methods.
 # Will use constant model for both decision points
-moPropen <- buildModelObj(model = ~ 1,
+moPropen1 <- buildModelObj(model = ~ L + C1,
                           solver.method = 'glm',
                           solver.args = list('family'='binomial'),
                           predict.method = 'predict.glm',
                           predict.args = list(type='response'))
-moPropen <- list(moPropen, moPropen)
+moPropen2 <- buildModelObj(model = ~ 1,
+                           solver.method = 'glm',
+                           solver.args = list('family'='binomial'),
+                           predict.method = 'predict.glm',
+                           predict.args = list(type='response'))
+moPropen <- list(moPropen1, moPropen2)
 
 # outcome model second stage
 ### specify the covariates of the main effects component of the outcome regression model
-moMain2 <- buildModelObj(model = ~ A1,
+moMain2 <- buildModelObj(model = ~ C1,
                          solver.method = 'lm')
 ### specify the covariates of the contrasts component of the outcome regression model
-moCont2 <- buildModelObj(model = ~C2,
+moCont2 <- buildModelObj(model = ~ L,
                          solver.method = 'lm')
 
 # outcome model first stage
-moMain1 <- buildModelObj(model = ~C1,
+moMain1 <- buildModelObj(model = ~ C1,
                          solver.method = 'lm')
-moCont1 <- buildModelObj(model = ~ C2,
+moCont1 <- buildModelObj(model = ~ A1,
                          solver.method = 'lm')
 
 moMain <- list(moMain1, moMain2)

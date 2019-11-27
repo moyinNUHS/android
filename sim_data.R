@@ -15,8 +15,8 @@ n = 500      #number of patients
 #.......................................................#
 
 ##Baseline
-A0 = rep(1, n)                                      # Start treatment for everyone
-L =  rnorm(n, mean = 10, sd = 5)                   # Baseline characteristics: comobidities score
+A0 = rep(1, n)                                    # Start treatment for everyone
+L =  rnorm(n, mean = 10, sd = 5)                  # Baseline characteristics: comobidities score
 C0 = rnorm(n, mean = 20, sd = 2) + 1.5 * L        # Time varying covariate: disease severity score
 
 ##Time varying, t=1 
@@ -30,7 +30,7 @@ A1 = rbinom(n , 1, P_A1)
 
 ##Time varying, t=2
 # C2 depends on L, C1
-mu_C2 = C1 - 1.5 * A1 + 2 * L 
+mu_C2 = C1 + 2 * L +  1.5 * A1   
 C2 = rnorm(n, mu_C2, 5)
 
 # P(A2) depends on L, C2
@@ -64,6 +64,7 @@ A2[which(A1 == 0)] = 0 #those who had antibiotics stopped at t=1 should have 0 i
 # Y = 20 + 6*C1 + (1-A1)*|C1 - 50|*{1(C1 - 50 > 0) - A1}^2 + A1*(1-A2)*|C2 - 70|*{1(C2 - 70 > 0) - A2}^2\
 #     + 5*A1 + 5*A1*A2
 mu_Y = 20 + 6 * C1 + (1 - A1) * abs(C1-50) * (ifelse((C1-50)>0,1,0) - A1)**2 + A1 * (1 - A2) * abs(C2-70) * (ifelse(C2-70>0,1,0) - A2)**2 + 5*A1 + 5*A1*A2
+#mu_Y = 20 + 6 * C1 +  abs(C1-50) * (ifelse((C1-50)>0,1,0) - A1)**2 + A1 * abs(C2-70) * (ifelse(C2-70>0,1,0) - A2)**2 
 Y = rnorm(n, mu_Y, 0.1)
 
 # Optimal regime
