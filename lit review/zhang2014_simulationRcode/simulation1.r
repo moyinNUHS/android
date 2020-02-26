@@ -65,11 +65,11 @@ data<-lapply(1:s,function(i) generate())
 
 ################################Evaluate data###############################
 
-m<-1000000 # number of 
-x0exp<-abs(rnorm(m,450,150))
-x1exp<-abs(rnorm(m,1.25*x0exp,60))
+m<-1000000 #number of datapoints for evaluation
+x0exp<-abs(rnorm(m,450,150)) #simulated values of baseline CD4 count
+x1exp<-abs(rnorm(m,1.25*x0exp,60)) #simulated values of six-month CD4 count
 
-evaluate(c(250,-1,360,-1))
+##evaluate final outcome under a given treatment regime
 evaluate<-function(eta) {
   
   x0<-x0exp
@@ -92,6 +92,7 @@ evaluate<-function(eta) {
   #gives the mean CD4 at time point two
   mean(y)
 }
+evaluate(c(250,-1,360,-1)) #should come out ~1120 as stated in paper
 
 obqrr<-function(eta) {
   
@@ -116,66 +117,63 @@ obqrr<-function(eta) {
   mean(c/pc*y+(c1-lamda1)/(1-lamda1)*ym0+(c2-lamda2*I(a0==g0))/((1-lamda1)*(1-lamda2))*ym1)
 }
 
+
 obqrr1<-function(eta) {
   
   eta0<-eta[1]
   eta1<-eta[2]
   
-  
-  
   g0<-as.numeric(I(x0<eta0))
-  
   g1<-as.numeric(g0+(1-g0)*I(x1<eta1))
-  
   
   c<-as.numeric(I(a0==g0)*I(a1==g1))
   
   lamda1<-(1-g0)*ph0+g0*(1-ph0)
-  
-  
   lamda2<-g1*(1-(g0+(1-g0)*ph1))+(1-g1)*(g0+(1-g0)*ph1)
-  
-  
   
   pc<-(1-lamda1)*(1-lamda2)
   
-  
-  
   mean(c/pc*y)
-  
-  
 }
 
 for(i in 1:s) {
-
+  
+  #pull simulated data into respective variables
   L1<-data[[i]][,1]; L2<-data[[i]][,3]
   A1<-data[[i]][,2]; A2<-data[[i]][,4]
   Y<-data[[i]][,5]
 
+  #rename variables
   x0<-L1; x1<-L2
   a0<-A1; a1<-A2
   y<-Y
   
   a0x0<-a0*x0
-  a00a1<-(1-a0)*a1
-  a00x1<-(1-a0)*x1
+  a00a1<-(1-a0)*a1 #a1 only matters if a0!=1 (treatment not yet initiated)
+  a00x1<-(1-a0)*x1 #x1 only matters if a0!=1 (treatment not yet initiated)
   a00a1x1<-(1-a0)*a1*x1
   
+  #create datasets based on treatment regimes that were followed
   dataH<-data.frame(x0,a0,x1,a1,y)
-  data0<-dataH[dataH[,2]==0,]
-  data1<-dataH[dataH[,2]==1,]
-  data00<-data0[data0[,4]==0,]
-  data01<-data0[data0[,4]==1,]
- 
-  fit00<-lm(y~x0+a0+a0x0+a00x1+a00a1+a00a1x1)
-
+  data0<-dataH[dataH[,2]==0,] #dataset including individuals who did not initiate at time 1
+  data1<-dataH[dataH[,2]==1,] #dataset including individuals who initiated at time 1
+  data00<-data0[data0[,4]==0,] #dataset including individuals that did not initiate at time 1 or 2
+  data01<-data0[data0[,4]==1,] #dataset including individuals who did not initiate until time 2
+  
+  ### q-learning #####################################################################
+  
+  fit00<-lm(y~x0+a0+a0x0+a00x1+a00a1+a00a1x1) #fit Q-learning function (Q2 at bottom of p.9)
+  
+  #save coefficients from model
   beta<-summary(fit00)$coef[,1]
   
   beta0.1<-beta[1]; beta1.1<-beta[2]; beta2.1<-beta[3]
   beta3.1<-beta[4]; beta4.1<-beta[5];beta5.1<-beta[6]; beta6.1<-beta[7]
   
+  #treatment regime for time 2 implied by model
   etat1.Q<-c(beta5.1/abs(beta6.1),sign(beta6.1))
   
+  #not sure I quite understand what's happening here (?) -- CT
   m.00<-beta0.1+beta1.1*x0+beta4.1*x1
   m.01<-m.00+beta5.1+beta6.1*x1
   m.10<-beta0.1+beta1.1*x0+beta2.1+beta3.1*x0
@@ -185,13 +183,16 @@ for(i in 1:s) {
   y0[a0==0]<-ifelse(m.01[a0==0]>m.00[a0==0],m.01[a0==0],m.00[a0==0])
   y0[a0==1]<-ifelse(m.11[a0==1]>m.10[a0==1],m.11[a0==1],m.10[a0==1])
   
-  fit0<-lm(y0~x0+a0+a0:x0)
-  beta<-summary(fit0)$coef[,1]
+  fit0<-lm(y0~x0+a0+a0:x0) #fit Q-learning function (Q1 at bottom of p.9)
   
+  #save coefficients from model
+  beta<-summary(fit0)$coef[,1]
   beta0.0<-beta[1]; beta1.0<-beta[2]; beta2.0<-beta[3]; beta3.0<-beta[4]
+  
   m.0<-beta0.0+beta1.0*x0
   m.1<-beta0.0+beta1.0*x0+beta2.0+beta3.0*x0
   
+  #treatment regime for time 1 implied by model
   etat0.Q<-c(beta2.0/abs(beta3.0),sign(beta3.0))
   eta.Q<-c(etat0.Q,etat1.Q)
   
@@ -202,7 +203,7 @@ for(i in 1:s) {
   
   Q<-rbind(Q,t(summary))
 
-  ########################################################################
+  ### a-learning #####################################################################
   
   logit1<-glm(a1~x1,family=binomial,data=data0, epsilon=1e-14)
   
