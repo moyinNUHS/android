@@ -79,32 +79,34 @@ evaluate<-function(eta) {
   eta0<-eta[1]; eta1<-eta[2]; eta2<-eta[3]; eta3<-eta[4]
   
   #optimal regimes 
-  g0<-as.numeric(I(eta0+eta1*x0>0))
+  g0<-as.numeric(I(eta0+eta1*x0>0)) 
   g1<-as.numeric(g0+(1-g0)*I(eta2+eta3*x1>0))
   
   #decisions
   a0<-as.numeric(I(alpha0+alpha1*x0>0))
   a1<-as.numeric(I(alpha2+alpha3*x1>0))
   
-  #final CD4t at time point two
-  y<-400+1.6*x0-abs(alpha0+alpha1*x0)*(a0-g0)^2-(1-a0)*abs(alpha2+alpha3*x1)*(a1-g1)^2
+  #final CD4 at time point two 
+  y<- 400 +1.6*x0-abs(alpha0+alpha1*x0)*(a0-g0)^2-(1-a0)*abs(alpha2+alpha3*x1)*(a1-g1)^2
   
   #gives the mean CD4 at time point two
   mean(y)
 }
-evaluate(c(250,-1,360,-1)) #should come out ~1120 as stated in paper
+evaluate(c(250,-1,360,-1)) #mean of the CD4 counts for all individuals at time point 2 (should come out ~1120 as stated in paper)
+# 250 - optimal regime is specified as time point 1 (start if CD4 <250), time point 2 (start if CD4 <360)
 
 obqrr<-function(eta) {
   
   eta0<-eta[1]
   eta1<-eta[2]
   
-  g0<-as.numeric(I(x0<eta0))
-  g1<-as.numeric(g0+(1-g0)*I(x1<eta1))
+  #optimal regimes 
+  g0<-as.numeric(I(x0<eta0)) #start if CD4 at time point one is less than eta0
+  g1<-as.numeric(g0+(1-g0)*I(x1<eta1)) #start if CD4 at time point one is less than eta1
   
-  c<-as.numeric(I(a0==g0)*I(a1==g1))
-  c1<-as.numeric(I(a0!=g0))
-  c2<-as.numeric(I(a0==g0)*I(a1!=g1))
+  c<-as.numeric(I(a0==g0)*I(a1==g1)) #label those who are on optimal regimes
+  c1<-as.numeric(I(a0!=g0)) #label those who are not on optimal regimes at time point one
+  c2<-as.numeric(I(a0==g0)*I(a1!=g1)) #label those who are not on optimal regimes at time point two
   
   lamda1<-(1-g0)*ph0+g0*(1-ph0)
   lamda2<-g1*(1-(g0+(1-g0)*ph1))+(1-g1)*(g0+(1-g0)*ph1)
@@ -117,16 +119,16 @@ obqrr<-function(eta) {
   mean(c/pc*y+(c1-lamda1)/(1-lamda1)*ym0+(c2-lamda2*I(a0==g0))/((1-lamda1)*(1-lamda2))*ym1)
 }
 
-
 obqrr1<-function(eta) {
   
   eta0<-eta[1]
   eta1<-eta[2]
   
-  g0<-as.numeric(I(x0<eta0))
-  g1<-as.numeric(g0+(1-g0)*I(x1<eta1))
-  
-  c<-as.numeric(I(a0==g0)*I(a1==g1))
+  #optimal regimes 
+  g0<-as.numeric(I(x0<eta0))#start if CD4 at time point one is less than eta0
+  g1<-as.numeric(g0+(1-g0)*I(x1<eta1))#start if CD4 at time point one is less than eta1
+
+  c<-as.numeric(I(a0==g0)*I(a1==g1)) #those who are on optimal regimes
   
   lamda1<-(1-g0)*ph0+g0*(1-ph0)
   lamda2<-g1*(1-(g0+(1-g0)*ph1))+(1-g1)*(g0+(1-g0)*ph1)
@@ -136,10 +138,10 @@ obqrr1<-function(eta) {
   mean(c/pc*y)
 }
 
-for(i in 1:s) {
+for(i in 1:s) { # for each iteration in the simulation 
   
   #pull simulated data into respective variables
-  L1<-data[[i]][,1]; L2<-data[[i]][,3]
+  L1<-data[[i]][,1]; L2<-data[[i]][,3] 
   A1<-data[[i]][,2]; A2<-data[[i]][,4]
   Y<-data[[i]][,5]
 
@@ -148,13 +150,13 @@ for(i in 1:s) {
   a0<-A1; a1<-A2
   y<-Y
   
-  a0x0<-a0*x0
+  a0x0<-a0*x0 
   a00a1<-(1-a0)*a1 #a1 only matters if a0!=1 (treatment not yet initiated)
   a00x1<-(1-a0)*x1 #x1 only matters if a0!=1 (treatment not yet initiated)
   a00a1x1<-(1-a0)*a1*x1
   
   #create datasets based on treatment regimes that were followed
-  dataH<-data.frame(x0,a0,x1,a1,y)
+  dataH<-data.frame(x0,a0,x1,a1,y) #complete dataset 
   data0<-dataH[dataH[,2]==0,] #dataset including individuals who did not initiate at time 1
   data1<-dataH[dataH[,2]==1,] #dataset including individuals who initiated at time 1
   data00<-data0[data0[,4]==0,] #dataset including individuals that did not initiate at time 1 or 2
@@ -167,36 +169,56 @@ for(i in 1:s) {
   #save coefficients from model
   beta<-summary(fit00)$coef[,1]
   
-  beta0.1<-beta[1]; beta1.1<-beta[2]; beta2.1<-beta[3]
-  beta3.1<-beta[4]; beta4.1<-beta[5];beta5.1<-beta[6]; beta6.1<-beta[7]
+  beta0.1<-beta[1] #intercept 
+  beta1.1<-beta[2] #x0
+  beta2.1<-beta[3] #a0
+  beta3.1<-beta[4] #a0x0
+  beta4.1<-beta[5] #a00x1
+  beta5.1<-beta[6] #a00a1
+  beta6.1<-beta[7] #a00a1x1
   
-  #treatment regime for time 2 implied by model
-  etat1.Q<-c(beta5.1/abs(beta6.1),sign(beta6.1))
+  #treatment regime for time 2 implied by model - CD4 threshold for 2nd time point
+  etat1.Q<-c(beta5.1/abs(beta6.1),sign(beta6.1)) 
   
-  #not sure I quite understand what's happening here (?) -- CT
-  m.00<-beta0.1+beta1.1*x0+beta4.1*x1
-  m.01<-m.00+beta5.1+beta6.1*x1
-  m.10<-beta0.1+beta1.1*x0+beta2.1+beta3.1*x0
-  m.11<-m.10
+  #estimate final CD4 based on the above Q-learning function (Q2)
+  m.00<-beta0.1+beta1.1*x0+beta4.1*x1 # when a0 = 0 (beta2.1, beta3.1 not considered) AND a00 = 1 (beta4.1 and beta5.1 considered) AND a1 = 0 (beta5.1, beta6.1 are not considered) 
+  m.01<-m.00+beta5.1+beta6.1*x1 # when a0 = 0(a00 = 1) AND a1 = 1
+  m.10<-beta0.1+beta1.1*x0+beta2.1+beta3.1*x0 # when a0 = 1(a00 = 0) AND a1 = 0
+  m.11<-m.10 # # when a0 = 1(a00 = 0) AND a1 = 1 
 
-  y0<-y
-  y0[a0==0]<-ifelse(m.01[a0==0]>m.00[a0==0],m.01[a0==0],m.00[a0==0])
-  y0[a0==1]<-ifelse(m.11[a0==1]>m.10[a0==1],m.11[a0==1],m.10[a0==1])
+  # CD4 at time point 1 - pick the best CD4 at time point 1 depending on if they initiated treatment at time point 1 
+  y0<-y # create dummy variable for the outcome at time point 1
+  # for those who did not initiate treatment at time point 1
+  y0[a0==0]<-ifelse(m.01[a0==0]>m.00[a0==0], # if CD4 for a0=0/a1=1 > a0=0/a1=0
+                    m.01[a0==0], # then outcome at time point 1 is those who initated later 
+                    m.00[a0==0]) # else outcome at time point 1 is those who did not initiate 
+  # for those who intiated treatment at time point 1
+  y0[a0==1]<-ifelse(m.11[a0==1]>m.10[a0==1],# if CD4 for a0=1/a1=1 > a0=1/a1=0
+                    m.11[a0==1], # then outcome at time point 1 is those who initated later
+                    m.10[a0==1]) # then outcome at time point 1 is those who did not initiate 
+  
   
   fit0<-lm(y0~x0+a0+a0:x0) #fit Q-learning function (Q1 at bottom of p.9)
   
   #save coefficients from model
   beta<-summary(fit0)$coef[,1]
-  beta0.0<-beta[1]; beta1.0<-beta[2]; beta2.0<-beta[3]; beta3.0<-beta[4]
   
-  m.0<-beta0.0+beta1.0*x0
-  m.1<-beta0.0+beta1.0*x0+beta2.0+beta3.0*x0
+  beta0.0<-beta[1] #intercept 
+  beta1.0<-beta[2] #x0
+  beta2.0<-beta[3] #a0
+  beta3.0<-beta[4] #x0a0
+  
+  #estimate CD4 at time point 1 based on the above Q-learning function (Q1)
+  m.0<-beta0.0+beta1.0*x0 #a0 = 0
+  m.1<-beta0.0+beta1.0*x0+beta2.0+beta3.0*x0 #a0 = 1
   
   #treatment regime for time 1 implied by model
   etat0.Q<-c(beta2.0/abs(beta3.0),sign(beta3.0))
-  eta.Q<-c(etat0.Q,etat1.Q)
   
-  expY<-evaluate(eta.Q)
+  eta.Q<-c(etat0.Q, etat1.Q) #combine the estimated CD4 cutoffs for time 1 and time 2 
+  
+  #evaluate final outcome under the estimated CD4 cutoffs based on the model we think is right 
+  expY<-evaluate(eta.Q) #output is mean of the final CD4
   
   hatQ<-mean(ifelse(m.1>m.0,m.1,m.0))
   summary<-c(eta.Q,hatQ,expY)
