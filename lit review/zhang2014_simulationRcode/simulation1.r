@@ -186,7 +186,7 @@ for(i in 1:s) { # for each iteration in the simulation
   m.10<-beta0.1+beta1.1*x0+beta2.1+beta3.1*x0 # when a0 = 1(a00 = 0) AND a1 = 0
   m.11<-m.10 # # when a0 = 1(a00 = 0) AND a1 = 1 
 
-  # CD4 at time point 1 - pick the best CD4 at time point 1 depending on if they initiated treatment at time point 1 
+  # CD4 at time point 2 - pick the best CD4 at time point 2 depending on if they initiated treatment at time point 1 
   y0<-y # create dummy variable for the outcome at time point 1
   # for those who did not initiate treatment at time point 1
   y0[a0==0]<-ifelse(m.01[a0==0]>m.00[a0==0], # if CD4 for a0=0/a1=1 > a0=0/a1=0
@@ -220,24 +220,33 @@ for(i in 1:s) { # for each iteration in the simulation
   #evaluate final outcome under the estimated CD4 cutoffs based on the model we think is right 
   expY<-evaluate(eta.Q) #output is mean of the final CD4
   
-  hatQ<-mean(ifelse(m.1>m.0,m.1,m.0))
-  summary<-c(eta.Q,hatQ,expY)
+  #mean of CD4 at time point 1 - pick the best CD4 at time point 1 depending on if they initiated treatment at time point 1 
+  hatQ<-mean(ifelse(m.1>m.0, #if CD4 at time 1 for those who initiated treatment > those who did not 
+                    m.1, #take the CD4 for those who initiated
+                    m.0)) #else take the CD4 for those who did not
   
-  Q<-rbind(Q,t(summary))
+  summary<-c(eta.Q, hatQ, expY)  
+  
+  Q<-rbind(Q,t(summary)) 
 
   ### a-learning #####################################################################
   
+  # h1 on pg. 9 
   logit1<-glm(a1~x1,family=binomial,data=data0, epsilon=1e-14)
   
   gamma<-summary(logit1)$coef[,1]
-  gamma0h.1<-gamma[1]
-  gamma1h.1<-gamma[2]
+  gamma0h.1<-gamma[1] #intercept - outcome if did not initiate at time point 1
+  gamma1h.1<-gamma[2] #x1 
   
-  ph1<-exp(gamma0h.1+gamma1h.1*x1)/(1+exp(gamma0h.1+gamma1h.1*x1))
+  ph1<-exp(gamma0h.1+gamma1h.1*x1)/(1+exp(gamma0h.1+gamma1h.1*x1)) #expit - the probabilities of starting treatmemt at time point 2  
   
-  aa<-a00a1-((1-a0)*ph1)
+  aa<-a00a1-((1-a0)*ph1) # a00a1<-(1-a0)*a1 
+                         # when a0 = 1, aa = 0 
+                         # when a0 = 0, a1 = 1, aa = 1 - ph1
+                         # when a0 = 0, a1 = 0, aa = - ph1
+                         # ?? what is aa? 
  
-  x1aa<-aa*x1
+  x1aa<-aa*x1 
 
   Z2<-cbind(1,x0,a0,a0x0,a00x1,a00a1,a00a1x1)                                                                    
   Za1<-cbind(1,x0,a0,a0x0,a00x1,aa,x1aa)                                                       
@@ -296,27 +305,32 @@ for(i in 1:s) { # for each iteration in the simulation
   A<-rbind(A,t(summary))
   
   ###############################################################################
+  
+  
   logit1<-glm(a1~x1,family=binomial,data=data0, epsilon=1e-14)
   
   gamma<-summary(logit1)$coef[,1]
-  gamma0h.1<-gamma[1]
-  gamma1h.1<-gamma[2]
+  gamma0h.1<-gamma[1] #intercept
+  gamma1h.1<-gamma[2] #x1
   
   logit0<-glm(a0~x0,family=binomial, epsilon=1e-14)
   
   gamma<-summary(logit0)$coef[,1]
-  gamma0h.0<-gamma[1]
-  gamma1h.0<-gamma[2]
+  gamma0h.0<-gamma[1] #intercept
+  gamma1h.0<-gamma[2] #x0
   
-  ph1<-exp(gamma0h.1+gamma1h.1*x1)/(1+exp(gamma0h.1+gamma1h.1*x1))
+  ph1<-exp(gamma0h.1+gamma1h.1*x1)/(1+exp(gamma0h.1+gamma1h.1*x1)) # probability of initiating at time 2
   
-  ph0<-exp(gamma0h.0+gamma1h.0*x0)/(1+exp(gamma0h.0+gamma1h.0*x0))
+  ph0<-exp(gamma0h.0+gamma1h.0*x0)/(1+exp(gamma0h.0+gamma1h.0*x0)) # probability of initiating at time 1
   
   #######################################################################
   
   etaH0<-sort(x0)[1:200]
   etaH1<-sort(x1)[1:200]
-  etaH<-expand.grid(etaH0,etaH1)
+  # we fixed (η21,η11)=(−1,−1) and determined η20,η10 via a grid search; because IPWE(η), DR(η) 
+  # and AIPWE(η) are step functions of η with jumps at (x1i , x2 j ) (i, j =1,...,n), 
+  # we maximized in η over all (x1i,x2j)
+  etaH<-expand.grid(etaH0,etaH1) 
   
   #########################################################
   idx <- which.max(apply(etaH, 1, obqrr))
@@ -331,11 +345,11 @@ for(i in 1:s) { # for each iteration in the simulation
   
   expY<-evaluate(eta)
   
-  sd<-sdmiwp(eta)
+  sd<-sdmiwp(eta) #get standard deviation 
   
-  ci.l<-hatQ-1.96*sd
-  ci.h<-hatQ+1.96*sd
-  ci.t<-as.numeric(I(1120>ci.l)*I(1120<ci.h))
+  ci.l<-hatQ-1.96*sd #get lower confidence interval 
+  ci.h<-hatQ+1.96*sd #get higher confidence interval 
+  ci.t<-as.numeric(I(1120>ci.l)*I(1120<ci.h)) 
   
   summary<-c(eta,hatQ,expY,sd,ci.t)
   
