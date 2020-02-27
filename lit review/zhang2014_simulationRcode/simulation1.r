@@ -86,7 +86,7 @@ evaluate<-function(eta) {
   a0<-as.numeric(I(alpha0+alpha1*x0>0))
   a1<-as.numeric(I(alpha2+alpha3*x1>0))
   
-  #final CD4 at time point two
+  #final CD4t at time point two
   y<-400+1.6*x0-abs(alpha0+alpha1*x0)*(a0-g0)^2-(1-a0)*abs(alpha2+alpha3*x1)*(a1-g1)^2
   
   #gives the mean CD4 at time point two
