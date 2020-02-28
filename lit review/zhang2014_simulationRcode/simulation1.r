@@ -89,7 +89,7 @@ evaluate<-function(eta) {
   #final CD4 at time point two 
   y<- 400 +1.6*x0-abs(alpha0+alpha1*x0)*(a0-g0)^2-(1-a0)*abs(alpha2+alpha3*x1)*(a1-g1)^2
   
-  #gives the mean CD4 at time point two
+  #gives the mean CD4 at time point 2 following the given optimal regime 
   mean(y)
 }
 evaluate(c(250,-1,360,-1)) #mean of the CD4 counts for all individuals at time point 2 (should come out ~1120 as stated in paper)
@@ -146,9 +146,11 @@ for(i in 1:s) { # for each iteration in the simulation
   Y<-data[[i]][,5]
 
   #rename variables
-  x0<-L1; x1<-L2
-  a0<-A1; a1<-A2
-  y<-Y
+  x0<-L1 #baseline CD4
+  x1<-L2 #CD4 at 6 months 
+  a0<-A1 # decision at baseline 
+  a1<-A2 # decision at 6months 
+  y<-Y  # CD4 at 12 month 
   
   a0x0<-a0*x0 
   a00a1<-(1-a0)*a1 #a1 only matters if a0!=1 (treatment not yet initiated)
@@ -164,7 +166,7 @@ for(i in 1:s) { # for each iteration in the simulation
   
   ### q-learning #####################################################################
   
-  fit00<-lm(y~x0+a0+a0x0+a00x1+a00a1+a00a1x1) #fit Q-learning function (Q2 at bottom of p.9)
+  fit00<-lm(y~x0+a0+a0x0+a00x1+a00a1+a00a1x1) #fit Q-learning function (Q2 on p.689)
   
   #save coefficients from model
   beta<-summary(fit00)$coef[,1]
@@ -177,15 +179,16 @@ for(i in 1:s) { # for each iteration in the simulation
   beta5.1<-beta[6] #a00a1
   beta6.1<-beta[7] #a00a1x1
   
-  #treatment regime for time 2 implied by model - CD4 threshold for 2nd time point
-  etat1.Q<-c(beta5.1/abs(beta6.1),sign(beta6.1)) 
+  #treatment regime for time 2 implied by model - CD4 threshold for 2nd time point (obtain G on p 684)
+  etat1.Q<-c(beta5.1/abs(beta6.1),sign(beta6.1)) #?? why divide
   
-  #estimate final CD4 based on the above Q-learning function (Q2)
-  m.00<-beta0.1+beta1.1*x0+beta4.1*x1 # when a0 = 0 (beta2.1, beta3.1 not considered) AND a00 = 1 (beta4.1 and beta5.1 considered) AND a1 = 0 (beta5.1, beta6.1 are not considered) 
-  m.01<-m.00+beta5.1+beta6.1*x1 # when a0 = 0(a00 = 1) AND a1 = 1
+  #expected final CD4 based on the above Q-learning function Q2 (p 684 obtain Q)
+  m.00<-beta0.1+beta1.1*x0+beta4.1*x1         # when a0 = 0 (beta2.1, beta3.1 not considered) AND a00 = 1 (beta4.1 and beta5.1 considered) AND a1 = 0 (beta5.1, beta6.1 are not considered) 
+  m.01<-m.00+beta5.1+beta6.1*x1               # when a0 = 0(a00 = 1) AND a1 = 1
   m.10<-beta0.1+beta1.1*x0+beta2.1+beta3.1*x0 # when a0 = 1(a00 = 0) AND a1 = 0
-  m.11<-m.10 # # when a0 = 1(a00 = 0) AND a1 = 1 
+  m.11<-m.10                                  # when a0 = 1(a00 = 0) AND a1 = 1 
 
+  # obtain optimal outcome (p. 683 section 2 obtain Vk for the next step of Q) 
   # CD4 at time point 2 - pick the best CD4 at time point 2 depending on if they initiated treatment at time point 1 
   y0<-y # create dummy variable for the outcome at time point 1
   # for those who did not initiate treatment at time point 1
@@ -197,8 +200,8 @@ for(i in 1:s) { # for each iteration in the simulation
                     m.11[a0==1], # then outcome at time point 1 is those who initated later
                     m.10[a0==1]) # then outcome at time point 1 is those who did not initiate 
   
-  
-  fit0<-lm(y0~x0+a0+a0:x0) #fit Q-learning function (Q1 at bottom of p.9)
+  #using optimised CD4 at time point 2
+  fit0<-lm(y0~x0+a0+a0:x0) #fit Q-learning function (Q1 p.689)
   
   #save coefficients from model
   beta<-summary(fit0)$coef[,1]
@@ -217,15 +220,15 @@ for(i in 1:s) { # for each iteration in the simulation
   
   eta.Q<-c(etat0.Q, etat1.Q) #combine the estimated CD4 cutoffs for time 1 and time 2 
   
-  #evaluate final outcome under the estimated CD4 cutoffs based on the model we think is right 
-  expY<-evaluate(eta.Q) #output is mean of the final CD4
-  
-  #mean of CD4 at time point 1 - pick the best CD4 at time point 1 depending on if they initiated treatment at time point 1 
+  #expected value of final CD4 given our optimal regime, from our training set (Ehat in the results table in the paper)
   hatQ<-mean(ifelse(m.1>m.0, #if CD4 at time 1 for those who initiated treatment > those who did not 
                     m.1, #take the CD4 for those who initiated
                     m.0)) #else take the CD4 for those who did not
   
-  summary<-c(eta.Q, hatQ, expY)  
+  #evaluate final outcome using the eta we derived from the Q learning - for validation (E in the results table in the paper)
+  expY<-evaluate(eta.Q) #output is mean of the final CD4, the correct answer 
+  
+  summary<-c(eta.Q, hatQ, expY) 
   
   Q<-rbind(Q,t(summary)) 
 
