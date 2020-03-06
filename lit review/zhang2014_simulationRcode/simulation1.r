@@ -241,6 +241,7 @@ for(i in 1:s) { # for each iteration in the simulation
   gamma0h.1<-gamma[1] #intercept - outcome if did not initiate at time point 1
   gamma1h.1<-gamma[2] #x1 
   
+  #propensity score for timepoint 2? (see bottom of pg. 9)
   ph1<-exp(gamma0h.1+gamma1h.1*x1)/(1+exp(gamma0h.1+gamma1h.1*x1)) #expit - the probabilities of starting treatmemt at time point 2  
   
   aa<-a00a1-((1-a0)*ph1) # a00a1<-(1-a0)*a1 
