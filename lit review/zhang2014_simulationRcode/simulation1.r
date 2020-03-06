@@ -252,8 +252,8 @@ for(i in 1:s) { # for each iteration in the simulation
  
   x1aa<-aa*x1 
 
-  Z2<-cbind(1,x0,a0,a0x0,a00x1,a00a1,a00a1x1)                                                                    
-  Za1<-cbind(1,x0,a0,a0x0,a00x1,aa,x1aa)                                                       
+  Z2<-cbind(1,x0,a0,a0x0,a00x1,a00a1,a00a1x1) #is this the design matrix for h2 and C2 together?                                                                   
+  Za1<-cbind(1,x0,a0,a0x0,a00x1,aa,x1aa)                                                      
   lZa1<-ncol(Za1)
   
   b2ahat<-as.vector(solve(t(Za1)%*%Z2)%*%t(Za1)%*%y)
