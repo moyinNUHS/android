@@ -28,11 +28,11 @@ alpha2<-720; alpha3<--2 #CD4 at time point 2
 
 expit <- function(x) { exp(x)/(1+exp(x)) }
 
-## generation of simulated data
+## generation of simulated data based on optimal regime
 generate<-function() {
   
   #CD4 and decision at time point one
-  L1<-abs(rnorm(n,450,150)) #CD4 at time point one 
+  L1<-abs(rnorm(n, 450, 150)) #CD4 at time point one 
   if(seq.rand) { #if following optimal regime at time point one
     A1<-rbinom(n, 1, expit(2-0.006*L1)) #1st decision is based on L1
   } else { #if NOT following optimal regime at time point one
@@ -40,13 +40,13 @@ generate<-function() {
   }
   
   #CD4 and decision at time point two
-  L2<-abs(1.25*L1+rnorm(n,0,60)) #CD4 at time point two (increasing with time)
+  L2<-abs(1.25*L1 + rnorm(n,0,60)) #CD4 at time point two (increasing with time)
   A2<-A1 #apply first decision to the second decision i.e. if started at time point 1, then continue treatment
   if(seq.rand) { #if following optimal regime at time point two
     #2nd decision is based on L2 for those who have not started treatment 
-    A2[A2==0]<-rbinom(n,1,expit(0.8-0.004*L2))[A2==0] 
+    A2[A2==0]<-rbinom(n, 1 ,expit(0.8-0.004*L2))[A2==0] 
   } else { #if NOT following optimal regime at time point two
-    A2[A2==0]<-rbinom(n,1,0.5)[A2==0] #2nd decision is 50%/50%
+    A2[A2==0]<-rbinom(n, 1, 0.5)[A2==0] #2nd decision is 50%/50%
   }
   
   L<-cbind(L1,L2) #combine columns of L1 and L2 ??not used later on??
@@ -57,7 +57,7 @@ generate<-function() {
   Y.opt<-abs(400+1.6*L1+rnorm(n,0,60)) # optimal CD4 at time point two (increasing trend)
   Y<-Y.opt-sum.mus # actual CD4 according to actual regime (sum.mus = 0 if optimal regime applied)
   
-  cbind(L1,A1,L2,A2,Y) #gives a matric of the simulated values 
+  cbind(L1,A1,L2,A2,Y) #gives a matrix of the simulated values 
 }
 
 ## gives s number of matrices containing simulated data
@@ -87,7 +87,7 @@ evaluate<-function(eta) {
   a1<-as.numeric(I(alpha2+alpha3*x1>0))
   
   #final CD4 at time point two 
-  y<- 400 +1.6*x0-abs(alpha0+alpha1*x0)*(a0-g0)^2-(1-a0)*abs(alpha2+alpha3*x1)*(a1-g1)^2
+  y <- 400 +1.6*x0-abs(alpha0+alpha1*x0)*(a0-g0)^2-(1-a0)*abs(alpha2+alpha3*x1)*(a1-g1)^2
   
   #gives the mean CD4 at time point 2 following the given optimal regime 
   mean(y)
@@ -149,8 +149,8 @@ for(i in 1:s) { # for each iteration in the simulation
   x0<-L1 #baseline CD4
   x1<-L2 #CD4 at 6 months 
   a0<-A1 # decision at baseline 
-  a1<-A2 # decision at 6months 
-  y<-Y  # CD4 at 12 month 
+  a1<-A2 # decision at 6 months 
+  y<-Y  # CD4 at 12 months 
   
   a0x0<-a0*x0 
   a00a1<-(1-a0)*a1 #a1 only matters if a0!=1 (treatment not yet initiated)
@@ -159,10 +159,10 @@ for(i in 1:s) { # for each iteration in the simulation
   
   #create datasets based on treatment regimes that were followed
   dataH<-data.frame(x0,a0,x1,a1,y) #complete dataset 
-  data0<-dataH[dataH[,2]==0,] #dataset including individuals who did not initiate at time 1
-  data1<-dataH[dataH[,2]==1,] #dataset including individuals who initiated at time 1
-  data00<-data0[data0[,4]==0,] #dataset including individuals that did not initiate at time 1 or 2
-  data01<-data0[data0[,4]==1,] #dataset including individuals who did not initiate until time 2
+  data0<-dataH[dataH[,2]==0,] #dataset including individuals who did not initiate at baseline
+  data1<-dataH[dataH[,2]==1,] #dataset including individuals who initiated at baseline
+  data00<-data0[data0[,4]==0,] #dataset including individuals that did not initiate at all
+  data01<-data0[data0[,4]==1,] #dataset including individuals who initiated at 6 months
   
   ### q-learning #####################################################################
   
@@ -182,25 +182,24 @@ for(i in 1:s) { # for each iteration in the simulation
   #treatment regime for time 2 implied by model - CD4 threshold for 2nd time point (obtain G on p 684)
   etat1.Q<-c(beta5.1/abs(beta6.1),sign(beta6.1)) #?? why divide
   
-  #expected final CD4 based on the above Q-learning function Q2 (p 684 obtain Q)
+  #expected 6 month CD4 based on the above Q-learning function Q2 (p 684 obtain Q)
   m.00<-beta0.1+beta1.1*x0+beta4.1*x1         # when a0 = 0 (beta2.1, beta3.1 not considered) AND a00 = 1 (beta4.1 and beta5.1 considered) AND a1 = 0 (beta5.1, beta6.1 are not considered) 
   m.01<-m.00+beta5.1+beta6.1*x1               # when a0 = 0(a00 = 1) AND a1 = 1
   m.10<-beta0.1+beta1.1*x0+beta2.1+beta3.1*x0 # when a0 = 1(a00 = 0) AND a1 = 0
   m.11<-m.10                                  # when a0 = 1(a00 = 0) AND a1 = 1 
 
-  # obtain optimal outcome (p. 683 section 2 obtain Vk for the next step of Q) 
-  # CD4 at time point 2 - pick the best CD4 at time point 2 depending on if they initiated treatment at time point 1 
-  y0<-y # create dummy variable for the outcome at time point 1
-  # for those who did not initiate treatment at time point 1
+  # obtain optimal CD4 at 6 months(p. 683 section 2 obtain Vk for the next step of Q) 
+  y0<-y #make dummy variable y0 for CD4 at 6 months
+  # for those who did not initiate treatment at 6 months
   y0[a0==0]<-ifelse(m.01[a0==0]>m.00[a0==0], # if CD4 for a0=0/a1=1 > a0=0/a1=0
-                    m.01[a0==0], # then outcome at time point 1 is those who initated later 
-                    m.00[a0==0]) # else outcome at time point 1 is those who did not initiate 
-  # for those who intiated treatment at time point 1
+                    m.01[a0==0], # then CD4 at 6 months is those who initiated later 
+                    m.00[a0==0]) # else CD4 at 6 months is those who did not initiate 
+  # for those who intiated treatment at 6 months
   y0[a0==1]<-ifelse(m.11[a0==1]>m.10[a0==1],# if CD4 for a0=1/a1=1 > a0=1/a1=0
-                    m.11[a0==1], # then outcome at time point 1 is those who initated later
-                    m.10[a0==1]) # then outcome at time point 1 is those who did not initiate 
+                    m.11[a0==1], # then CD4 at 6 months is those who initiated later
+                    m.10[a0==1]) # then CD4 at 6 months is those who did not initiate 
   
-  #using optimised CD4 at time point 2
+  #using optimised CD4 at 6 months
   fit0<-lm(y0~x0+a0+a0:x0) #fit Q-learning function (Q1 p.689)
   
   #save coefficients from model
