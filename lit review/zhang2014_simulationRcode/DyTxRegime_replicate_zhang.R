@@ -1,7 +1,7 @@
 ########Q and A learning doubly robust #########
 ################################################
 rm(list = ls())
-source('simulation.stop.R')
+source('simulation_replicate_zhang.R')
 
 #Based on the method proposed by Zhang et al 2013 
 #(https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3843953/)
@@ -11,6 +11,26 @@ library(rgenoud)
 n = 1000
 data <- as.data.frame(generate(n = n))
 head(data)
+
+# Define subsets of patients to limit available treatments 
+fSet1 <- function(data) {
+  subsets <- list(list('subA', c(0,1)))
+  txOpts <- rep('subA', nrow(data))
+  
+  return(list("subsets" = subsets,
+              "txOpts" = txOpts))
+}
+
+fSet2 <- function(data) {
+  subsets <- list(list('subA', c(0,1)),
+                  list('subB', c(1)))
+  txOpts <- rep('subA', nrow(data))
+  txOpts[data$A1 == 1 ] <- 'subB'
+  
+  return(list("subsets" = subsets,
+              "txOpts" = txOpts))
+}
+fSet = list(fSet1, fSet2)
 
 # Define the propensity for treatment model and methods.
 moPropen1 <- buildModelObj(model = ~ L1,
@@ -27,17 +47,16 @@ moPropen <- list(moPropen1, moPropen2)
 
 # outcome model second stage
 ### specify the covariates of the main effects component of the outcome regression model
-moMain2 <- buildModelObj(model = ~ L1 + A1 + A1:L1 + L2 + A2 + A2:L2 + A1:L2,
+moMain2 <- buildModelObj(model = ~ L1 + A1 + L1:A1 + A2 + L2 + A1:L2 + A2:L2,
                          solver.method = 'lm')
-
 ### specify the covariates of the contrasts component of the outcome regression model
-moCont2 <- buildModelObj(model = ~ A2,
+moCont2 <- buildModelObj(model = ~ L2 + A1 + A1:L2 ,
                          solver.method = 'lm')
 
 # outcome model first stage
-moMain1 <- buildModelObj(model = ~ L1 + A1 + A1:L1,
+moMain1 <- buildModelObj(model = ~ L1 + A1 + L1:A1,
                          solver.method = 'lm')
-moCont1 <- buildModelObj(model = ~ A1,
+moCont1 <- buildModelObj(model = ~ A1 + A1:L1,
                          solver.method = 'lm')
 
 moMain <- list(moMain1, moMain2)
@@ -45,14 +64,14 @@ moCont <- list(moCont1, moCont2)
 
 # regime function second stage
 regime2 <- function(eta2, data) {
-  tst <- {as.numeric(I(data$L2 > eta2 & data$A1 == 0))} #those with survival score at time point 2 is lower than the 2nd threshold given 1
+  tst <- {as.numeric(I(data$L2 < eta2 | data$A1 == 1))}
   rec <- rep(1, nrow(x = data))
   rec[!tst] <- 0 
   return( rec )
 }
 # regime function first stage
 regime1 <- function(eta1, data) {
-  tst <- {as.numeric(I(data$L1 > eta1))}
+  tst <- {as.numeric(I(data$L1 < eta1))}
   rec <- rep(1, nrow(x = data))
   rec[!tst] <- 0
   return( rec )
@@ -62,11 +81,12 @@ regimes <- list(regime1, regime2)
 #### Analysis using AIPW
 fit_AIPW <- optimalSeq(moPropen = moPropen,
                        moMain = moMain, moCont = NULL,
+                       fSet = fSet,
                        regimes = regimes,
                        data = data, response = data$Y, txName = c('A1', 'A2'),
                        Domains = cbind(rep(200, 2), rep(400, 2)),
                        pop.size = 1000, 
-                       starting.values = rep(300, 2))
+                       starting.values = rep(250, 2))
 
 ##Available methods
 # Coefficients of the regression objects
@@ -98,4 +118,4 @@ show(object = fit_AIPW)
 # Show summary results of method
 summary(object = fit_AIPW)
 #estimated values for eta 
-regimeCoef(object = fit_AIPW)
+regimeCoef(object = fit_AIPW) 

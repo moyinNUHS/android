@@ -65,15 +65,15 @@ data<-lapply(1:s,function(i) generate())
 
 ################################Evaluate data###############################
 
-m<-1000000 #number of datapoints for evaluation
+m<-1000 #number of datapoints for evaluation
 x0exp<-abs(rnorm(m,450,150)) #simulated values of baseline CD4 count
 x1exp<-abs(rnorm(m,1.25*x0exp,60)) #simulated values of six-month CD4 count
 
-##evaluate final outcome under a given treatment regime
-evaluate<-function(eta) {
+##evaluate final outcome CD4 at 1 year under a given treatment regime (indicated by values of eta) - CORRECTLY SPECIFIED
+evaluate<-function(eta) { #supply a vector of eta values
   
-  x0<-x0exp
-  x1<-x1exp
+  x0<-x0exp #simulated values of baseline CD4 count
+  x1<-x1exp #simulated values of six-month CD4 count
   
   #assign estimates to evaluate
   eta0<-eta[1]; eta1<-eta[2]; eta2<-eta[3]; eta3<-eta[4]
@@ -92,7 +92,8 @@ evaluate<-function(eta) {
   #gives the mean CD4 at time point 2 following the given optimal regime 
   mean(y)
 }
-evaluate(c(250,-1,360,-1)) #mean of the CD4 counts for all individuals at time point 2 (should come out ~1120 as stated in paper)
+evaluate(c(250,-1,360,-1)) #gives mean of the CD4 counts for all individuals at time point 2 
+# with c(250,-1,360,-1) which are optimal conditions --> should come out ~1120 as stated in paper
 # 250 - optimal regime is specified as time point 1 (start if CD4 <250), time point 2 (start if CD4 <360)
 
 obqrr<-function(eta) {
@@ -101,32 +102,41 @@ obqrr<-function(eta) {
   eta1<-eta[2]
   
   #optimal regimes 
-  g0<-as.numeric(I(x0<eta0)) #start if CD4 at time point one is less than eta0
-  g1<-as.numeric(g0+(1-g0)*I(x1<eta1)) #start if CD4 at time point one is less than eta1
+  g0<-as.numeric(I(x0<eta0)) #start if baseline CD4 < eta0 WRONGLY SPECIFIED 
+  g1<-as.numeric(g0+(1-g0)*I(x1<eta1)) #start if 6 months CD4 < eta1 WRONGLY SPECIFIED 
   
-  c<-as.numeric(I(a0==g0)*I(a1==g1)) #label those who are on optimal regimes
-  c1<-as.numeric(I(a0!=g0)) #label those who are not on optimal regimes at time point one
-  c2<-as.numeric(I(a0==g0)*I(a1!=g1)) #label those who are not on optimal regimes at time point two
+  # Coarsening reflecting the extent to which the observed treatments 
+  # received are consistent with those dictated by gη (pg 685)
+  c<-as.numeric(I(a0==g0)*I(a1==g1)) #label those who are on the regime
+  c1<-as.numeric(I(a0!=g0)) #label those who are not on the regime at baseline
+  c2<-as.numeric(I(a0==g0)*I(a1!=g1)) #label those who are not on the regime at 6 months
   
-  lamda1<-(1-g0)*ph0+g0*(1-ph0)
+  # in the observed data (which give ph0 and ph1),the probability of not taking up the regime 
+  lamda1<-(1-g0)*ph0+g0*(1-ph0) # pg 686 eqn above eqn 4 
   lamda2<-g1*(1-(g0+(1-g0)*ph1))+(1-g1)*(g0+(1-g0)*ph1)
   
-  pc<-(1-lamda1)*(1-lamda2)
+  pc<-(1-lamda1)*(1-lamda2) #end of 2nd last paragraph on pg 686 
   
+  #expected CD4 values 
   ym0<-g0*m.1+(1-g0)*m.0
   ym1<-g0*(m.10)+(1-g0)*(g1*m.01+(1-g1)*m.00)
   
+  # eqn 4 on pg 686 - inverse probability weighting with coarsening, 
+  #                   giving weight for those who followed the regime 
+  #                   partially as well
+  # gives expected final CD4 
   mean(c/pc*y+(c1-lamda1)/(1-lamda1)*ym0+(c2-lamda2*I(a0==g0))/((1-lamda1)*(1-lamda2))*ym1)
 }
 
-obqrr1<-function(eta) {
+#eqn 5 pg 687 IPW
+obqrr1<-function(eta) { #just for those who followed the regime
   
   eta0<-eta[1]
   eta1<-eta[2]
   
   #optimal regimes 
-  g0<-as.numeric(I(x0<eta0))#start if CD4 at time point one is less than eta0
-  g1<-as.numeric(g0+(1-g0)*I(x1<eta1))#start if CD4 at time point one is less than eta1
+  g0<-as.numeric(I(x0<eta0))#start if baseline CD4 < eta0
+  g1<-as.numeric(g0+(1-g0)*I(x1<eta1))#start if baseline CD4 < eta1
 
   c<-as.numeric(I(a0==g0)*I(a1==g1)) #those who are on optimal regimes
   
@@ -135,7 +145,7 @@ obqrr1<-function(eta) {
   
   pc<-(1-lamda1)*(1-lamda2)
   
-  mean(c/pc*y)
+  mean(c/pc*y) 
 }
 
 for(i in 1:s) { # for each iteration in the simulation 
@@ -237,27 +247,29 @@ for(i in 1:s) { # for each iteration in the simulation
   logit1<-glm(a1~x1,family=binomial,data=data0, epsilon=1e-14)
   
   gamma<-summary(logit1)$coef[,1]
-  gamma0h.1<-gamma[1] #intercept - outcome if did not initiate at time point 1
+  gamma0h.1<-gamma[1] 
   gamma1h.1<-gamma[2] #x1 
   
-  #propensity score for timepoint 2? (see bottom of pg. 9)
-  ph1<-exp(gamma0h.1+gamma1h.1*x1)/(1+exp(gamma0h.1+gamma1h.1*x1)) #expit - the probabilities of starting treatmemt at time point 2  
+  #propensity score at 6 months (see bottom of pg. 9)
+  ph1<-exp(gamma0h.1+gamma1h.1*x1)/(1+exp(gamma0h.1+gamma1h.1*x1)) 
+  #ph1 - the probabilities of starting treatment at 6 months
   
+  #supplementary material S.1
+  # aa, x1aa are contrasts
   aa<-a00a1-((1-a0)*ph1) # a00a1<-(1-a0)*a1 
-                         # when a0 = 1, aa = 0 
+                         # when a0 = 1,         aa = 0 
                          # when a0 = 0, a1 = 1, aa = 1 - ph1
                          # when a0 = 0, a1 = 0, aa = - ph1
-                         # ?? what is aa? 
  
   x1aa<-aa*x1 
 
-  Z2<-cbind(1,x0,a0,a0x0,a00x1,a00a1,a00a1x1) #is this the design matrix for h2 and C2 together?                                                                   
-  Za1<-cbind(1,x0,a0,a0x0,a00x1,aa,x1aa)                                                      
+  Z2<-cbind(1,x0,a0,a0x0,a00x1,a00a1,a00a1x1) #2rd and 3rd terms of S.2                                                                 
+  Za1<-cbind(1,x0,a0,a0x0,a00x1,aa,x1aa) ###   ???don't understand???                                                
   lZa1<-ncol(Za1)
   
   b2ahat<-as.vector(solve(t(Za1)%*%Z2)%*%t(Za1)%*%y)
   
-  psi.temp<-b2ahat[6:7]
+  psi.temp<-b2ahat[6:7] #for the contrasts (aa, x1aa)
   psi.temp.1<-psi.temp
   
   eta10<-psi.temp[1]
@@ -267,12 +279,16 @@ for(i in 1:s) { # for each iteration in the simulation
   eta11<-sign(eta11)
   etat1<-c(eta10,eta11)
 
-  d.opt.1<-as.numeric(cbind((1-a0),a00x1) %*% psi.temp.1 >= 0)
+  #optimal regime at 6 months given the above calculations
+  d.opt.1<-as.numeric(cbind((1-a0), a00x1) %*% psi.temp.1 >= 0) 
   
   d.opt.minus.A <- d.opt.1 - a1
+  # optimal final CD4 after accounting for decision and CD4 at 6 months
   Y.dash <- y + d.opt.minus.A*(cbind((1-a0),a00x1) %*% psi.temp.1)
   
   logit0<-glm(a0~x0,family=binomial, epsilon=1e-14)
+  
+  #propensity score at baseline
   ph0<-logit0$fit
   
   aa<-a0-ph0
@@ -285,6 +301,7 @@ for(i in 1:s) { # for each iteration in the simulation
   
   b2ahat<-as.vector(solve(t(Za1)%*%Z2)%*%t(Za1)%*%Y.dash)
   
+  #coefficient for contrast functions (aa, x0aa)
   psi.temp<-b2ahat[3:4]
   psi.temp.0<-psi.temp
   
@@ -301,6 +318,7 @@ for(i in 1:s) { # for each iteration in the simulation
   
   d.opt.0<-as.numeric(cbind(1,x0) %*% psi.temp.0 > 0)
   d.opt.minus.A <- d.opt.0 - a0
+  #final optimal CD4 after accounting for CD4 and decisions at both timesteps
   hatQ<-mean(Y.dash+ d.opt.minus.A*(cbind(1,x0) %*% psi.temp.0))
   
   summary<-c(eta,hatQ,expY)
@@ -308,7 +326,6 @@ for(i in 1:s) { # for each iteration in the simulation
   A<-rbind(A,t(summary))
   
   ###############################################################################
-  
   
   logit1<-glm(a1~x1,family=binomial,data=data0, epsilon=1e-14)
   
@@ -385,16 +402,20 @@ for(i in 1:s) { # for each iteration in the simulation
 
 }
 
-colMeans(A)
+colMeans(A) #Q contrast function correct, propensity score correct==> 
+#            Q learning results: 245.0149 9   -1.0000 358.5801   -1.0000 1120.7268 1119.5472
 sd(A)
 
-colMeans(Q)
+colMeans(Q) #Q contrast function correct
+#            Q learning results:228.0667   -1.0000  321.7901   -1.0000 1116.8461 1118.4765 
 sd(Q)
 
-colMeans(miwp.w)
+colMeans(miwp.w) #Q contrast function correct, propensity score correct 
+#                 AIPWE results: 209.72444   -1.00000  362.88239   -1.00000 1124.52248 1117.66568   11.69395    0.93100
 sd(miwp.w)
 
-colMeans(iwp.w)
+colMeans(iwp.w) # Q contrast function correct, propensity score correct 
+#                 IPWE results: 268.09473   -1.00000  396.83395   -1.00000 1182.66945 1104.89721   34.00813    0.59200
 sd(iwp.w)
 
 md<-miwp.w
