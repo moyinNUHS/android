@@ -1,7 +1,7 @@
 set.seed(123456)
 
 ## generation of simulated data based on optimal regime
-generate<-function(n, seq.rand = 1, psi10 = 250, psi20 = 720, psi11=-1, psi21 = -1) {
+generate<-function(n, seq.rand = 1, psi10 = 250, psi20 = 720, psi11=-1, psi21 = -2) {
   
   expit <- function(x) { exp(x)/(1+exp(x)) }
   
