@@ -7,9 +7,14 @@ source('simulation_replicate_zhang.R')
 #(https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3843953/)
 library(DynTxRegime) #tutorial here - shiny::runGitHub('DynTxRegimeTutorial','ShupingR')
 library(rgenoud)
+library(parallel)
 
 n = 500
-data <- as.data.frame(generate(n = n))
+niter = 10
+data_set = list()
+for (i in 1:niter){
+  data_set[[i]] <- as.data.frame(generate(n = n))
+}
 head(data)
 
 # Define subsets of patients to limit available treatments 
@@ -45,38 +50,44 @@ p2 <- modelObj::buildModelObj(model = ~ L2,
 
 
 # outcome model second stage
-### specify the covariates of the main effects component of the outcome regression model
-q2Main <- modelObj::buildModelObj(model = ~ L1 + L2,
-                                  solver.method = 'lm',
-                                  predict.method = 'predict.lm')
-### specify the covariates of the contrasts component of the outcome regression model
-q2Cont <- modelObj::buildModelObj(model = ~ L2,
-                                  solver.method = 'lm',
-                                  predict.method = 'predict.lm')
+q2Main <- buildModelObjSubset(model = ~ L1 + A1 + L1:A1 + I((1-A1)*L2) + I((1-A1)*A2) + I((1-A1)*L2):A2,
+                              solver.method = 'lm',
+                              predict.method = 'predict.lm', dp = 2, subset = "s1,s2")
+q2Cont <- NULL
 
-# outcome model first stage
-q1Main <- modelObj::buildModelObj(model = ~ L1,
-                                  solver.method = 'lm',
-                                  predict.method = 'predict.lm')
-q1Cont <- modelObj::buildModelObj(model = ~ L1,
-                                  solver.method = 'lm',
-                                  predict.method = 'predict.lm')
+q1Main <- buildModelObjSubset(model = ~ L1 + A1 + A1:L1,
+                              solver.method = 'lm',
+                              predict.method = 'predict.lm', dp = 1, subset = "s1")
+q1Cont <- NULL
 
 # regime function second stage
-regime2 <- function(eta2, data){return(data$A1 + {1L-data$A1}*{data$L2 < eta2}) }
+regime2 <- function(eta2, data){return(data$A1 + {1L-data$A1}*{data$L2 < eta2})}
 # regime function first stage
 regime1 <- function(eta1, data){return(as.integer(x = {data$L1 < eta1})) }
 
 #### Analysis using AIPW
-fit_AIPW <- optimalSeq(moPropen =list(p1, p2),
-                       moMain = list(q1Main, q2Main), 
-                       moCont = list(q1Cont, q2Cont),
-                       fSet = list(fSet1,fSet2),
-                       regimes = list(regime1, regime2),
-                       data = data, response = data$Y, txName = c('A1', 'A2'),
-                       Domains = rbind(c(200, 300), c(300,400)),
-                       pop.size = 500, 
-                       starting.values = c(250, 350))
+foo = function (data) { 
+  optimalSeq(moPropen =list(p1, p2),
+             moMain = list(q1Main, q2Main), 
+             moCont = NULL,
+             fSet = list(fSet1,fSet2),
+             regimes = list(regime1, regime2),
+             data = data, response = data$Y, txName = c('A1', 'A2'),
+             Domains = rbind(c(200, 300), c(650,750)),
+             pop.size = 500, 
+             starting.values = c(250, 700))
+}
+
+save_runs = mclapply(data_set, foo,  mc.cores = 11)
+
+coeffs = list()
+for (i in 1:niter){
+  coeffs[[i]] <-regimeCoef(object = save_runs[[i]])
+}
+
+out = as.data.frame(matrix(unlist(coeffs), byrow = T, ncol = 2))
+colnames(out) = c('eta1', 'eta2')
+out 
 
 ##Available methods
 # Coefficients of the regression objects
