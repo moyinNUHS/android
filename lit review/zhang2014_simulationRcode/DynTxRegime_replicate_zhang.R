@@ -9,13 +9,13 @@ library(DynTxRegime) #tutorial here - shiny::runGitHub('DynTxRegimeTutorial','Sh
 library(rgenoud)
 library(parallel)
 
-n = 500
-niter = 10
+n = 2000
+niter = 1
 data_set = list()
 for (i in 1:niter){
   data_set[[i]] <- as.data.frame(generate(n = n))
 }
-head(data)
+head(data_set[[1]])
 
 # Define subsets of patients to limit available treatments 
 fSet1 <- function(data){
@@ -50,7 +50,7 @@ p2 <- modelObj::buildModelObj(model = ~ L2,
 
 
 # outcome model second stage
-q2Main <- buildModelObjSubset(model = ~ L1 + A1 + L1:A1 + I((1-A1)*L2) + I((1-A1)*A2) + I((1-A1)*L2):A2,
+q2Main <- buildModelObjSubset(model = ~ L1 + A1 + L1:A1 + I(1-A1):L2 + I((1-A1)*A2) + I((1-A1)*A2):L2,
                               solver.method = 'lm',
                               predict.method = 'predict.lm', dp = 2, subset = "s1,s2")
 q2Cont <- NULL
@@ -73,9 +73,9 @@ foo = function (data) {
              fSet = list(fSet1,fSet2),
              regimes = list(regime1, regime2),
              data = data, response = data$Y, txName = c('A1', 'A2'),
-             Domains = rbind(c(200, 300), c(650,750)),
-             pop.size = 500, 
-             starting.values = c(250, 700))
+             Domains = rbind(c(50, 500), c(50, 500)),
+             pop.size = 2000, 
+             starting.values = c(250, 350))
 }
 
 save_runs = mclapply(data_set, foo,  mc.cores = 11)
