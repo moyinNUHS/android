@@ -38,7 +38,7 @@ for(i in 1:N) {
   K <- rbfkernel(as.matrix(X), sigma=1) # covariance matrix from RBF function
   
   # Generate 10 sample path with mean mu and covariance matrix K
-  Z <- mvrnorm(n = 20, mu, K)
+  Z <- mvrnorm(n = 1, mu, K) 
   
   # Plotting mean and standard deviation across 20 samples of function
   mean <- colMeans(Z)
@@ -47,12 +47,12 @@ for(i in 1:N) {
                     "mean" = mean,
                     "lower" = mean - stdev,
                     "upper" = mean + stdev)
-  p <- ggplot(data=dat, aes(x=time, y=mean)) + geom_point() + geom_line() +
-    geom_ribbon(aes(ymin=dat$lower, ymax=dat$upper), linetype=2, alpha=0.1) +
-    ggtitle(paste("Patient",i)) +
-    geom_vline(xintercept=T_stop[i]) +
-    geom_text(aes(x=T_stop[i]+1, label="Stop", y=0), angle=90) +
-    theme_bw()
-  print(p)
+  # p <- ggplot(data=dat, aes(x=time, y=mean)) + geom_point() + geom_line() +
+  #   geom_ribbon(aes(ymin=dat$lower, ymax=dat$upper), linetype=2, alpha=0.1) +
+  #   ggtitle(paste("Patient",i)) +
+  #   geom_vline(xintercept=T_stop[i]) +
+  #   geom_text(aes(x=T_stop[i]+1, label="Stop", y=0), angle=90) +
+  #   theme_bw()
+  # print(p)
 }
 
