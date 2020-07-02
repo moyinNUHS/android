@@ -5,13 +5,13 @@ library(magrittr)
 library(scales)
 
 get_data = function(n, H, setup_params,outcome_interest="survival", e_rct=F, treat_once=F){
-  init = get_init(n, setup_params)
+  init = get_init(n, setup_params) # X_1 dim (n,1)
 
   A0_time = rep(H+1, n)
   A0_choice = rep(1, n)
   X0 = get_X_init(init, A0_time, A0_choice, n, H, setup_params)
-  Z0 = get_Z(X0, setup_params)
-  action = get_A_sim(Z0, e_rct)
+  Z0 = get_Z(X0, setup_params) # S_t | X_t
+  action = get_A_sim(Z0, e_rct) # A_t | S_t
   A_time = action$A_time
   A_choice = action$A_choice
 
@@ -41,6 +41,7 @@ get_data = function(n, H, setup_params,outcome_interest="survival", e_rct=F, tre
 get_X_traj = function(X, A_time, A_choice, H, setup_params, start, treat_once = F){
   # start is the time index for which X[1:start] would be fixed, and we only roll out starting from X[,start+1]
   A = 1 - t(sapply(A_time, function(tt) as.numeric(1:H < tt)))
+  # A = 1 - sapply(A_time, function(tt) as.numeric(1:H < tt))
   for (t in (start+1):(H+1)) {
     if (sum(as.numeric(A_time<t)) > 0) {
       if (treat_once) {
@@ -108,7 +109,7 @@ get_X_init = function(init, A_time, A_choice, n, H, setup_params) {
   n = dim(init)[1]
   A = 1 - t(sapply(A_time, function(tt) as.numeric(1:H < tt)))
   for (t in 2:(H+1)) {
-    new = transition(curr, A[,t-1], A_choice, t, H, setup_params)
+    new = transition(curr, A[,t-1], A_choice, t, H, setup_params) # X_t+1 | X_t, A_t
     traj[[t]] = new
     curr = new
   }
