@@ -9,11 +9,12 @@ source("simu_common.R")
 pal = brewer.pal(n = 8, name = "Dark2")
 
 get_policy_params = function() {
-  params = cbind(0, -1, c(1:11)) # always treat, and never treat corresponding to the 1st and 11th policy here
-  params = rbind(params, cbind(1,0, seq(-.5, 5, 0.5)))
-  params_0 = cbind(1, expand.grid(c(-1/4, -1/3, -1/2, -1, -2, -3, -4), seq(1, 15, 1)))
-  colnames(params) = names(params_0)
-  params = rbind(params, params_0)
+  # params = cbind(0, -1, c(1:11)) # always treat, and never treat corresponding to the 1st and 11th policy here
+  # params = rbind(params, cbind(1,0, seq(-.5, 5, 0.5)))
+  # params_0 = cbind(1, expand.grid(c(-1/4, -1/3, -1/2, -1, -2, -3, -4), seq(1, 15, 1)))
+  # colnames(params) = names(params_0)
+  # params = rbind(params, params_0)
+  params = cbind(-1, expand.grid(seq(-100,-150,-10), seq(-100, -150, -10)))
   params
 }
 
@@ -29,8 +30,18 @@ get_A_sim = function(Z, e_rct=F){
   #            A_choice = A_choice))
    n = dim(Z)[1]
    H = dim(Z)[2] - 1
+   # stop_matrix = matrix(unlist(lapply(1:H, function(t) {
+   #   stop_prob = 1/(1+exp(-(Z[,t,1]-1.5)) + exp(-(t-3)))
+   #   stop = rbinom(n, 1, stop_prob)
+   #   stop
+   # }
+   # )), n, H)
    stop_matrix = matrix(unlist(lapply(1:H, function(t) {
-     stop_prob = 1/(1+exp(-(Z[,t,1]-1.5)) + exp(-(t-3)))
+     if (t==1) {
+       stop_prob = 1/(1+exp(-2+0.006*Z[,t,1]))
+     } else if (t==2) {
+       stop_prob = 1/(1+exp(-0.8+0.004*Z[,t,1]))
+     }
      stop = rbinom(n, 1, stop_prob)
      stop
    }
@@ -50,21 +61,28 @@ get_A_sim = function(Z, e_rct=F){
 
 transition = function(prev, A, A_choice, t, H, setup_params){
 
-  sigma = setup_params$sigma
-  delta = sigma / sqrt(2 * H) * rnorm(dim(prev)[1])
+  sigma = setup_params$sigma_t2
+  # delta = sigma / sqrt(2 * H) * rnorm(dim(prev)[1])
+  # 
+  # new = prev + delta + 1 / (1+exp(0.3 * prev[,1])) * (1-A)
+  # new[prev[,1] < -0.5,] = prev[prev < -0.5,]
 
-  new = prev + delta + 1 / (1+exp(0.3 * prev[,1])) * (1-A)
-  new[prev[,1] < -0.5,] = prev[prev < -0.5,]
-
+  delta = sigma * rnorm(dim(prev)[1])
+  new = 1.25*prev + delta
   new
 }
 
 
 get_reward = function(lifetime, Z, A_choice, A_time, H, setup_params, outcome_interest = "survival"){
-  beta = setup_params$beta
-  success = as.numeric(Z[,H+1,1] > 0)
-  cost = (A_time - 1) / H
-  return(beta * success - cost)
+  # beta = setup_params$beta
+  # success = as.numeric(Z[,H+1,1] > 0)
+  # cost = (A_time - 1) / H
+  X1 = Z[,1,1]
+  X2 = Z[,2,1]
+  A1 = ifelse(A_time==1, 1, 0)
+  A2 = as.numeric(ifelse(A_time==2, 1, 0) | A1)
+  mean = 400 + 1.6*X1 + abs(250-X1)*(A1-ifelse(250-X1>0,1,0))**2 - (1-A1)*abs(720-2*X2)*(A2-ifelse(720-2*X2>0,1,0))**2
+  return(mean + 60*rnorm(dim(Z)[1]))
 }
 
 
@@ -81,8 +99,8 @@ get_Z = function(X, setup_params) {
 
 get_init = function(n, setup_params) {
 
-  sigma = setup_params$sigma
-  init = sigma * rnorm(n)
+  sigma = setup_params$sigma_t1
+  init = 450 + sigma * rnorm(n)
   return(matrix(init, n, 1))
 
 }

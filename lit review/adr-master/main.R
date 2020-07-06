@@ -16,7 +16,7 @@ oracle_from_file = T # using pre-computed oracle/monte carlo rollout values for 
 results_dir = "results"
 plots_dir = "plots"
 results_oracle_dir = "results_oracle"
-log_trajs = F # log trajectories into RData files to produce state evolution plots later that compare Fitted-Q decision boundaries vs ADR
+log_trajs = T # log trajectories into RData files to produce state evolution plots later that compare Fitted-Q decision boundaries vs ADR
 if (cluster) { # if running on a cluster
   args=(commandArgs(T))
   setup= as.character(args[1])
@@ -31,7 +31,7 @@ c_learner = "grf"
 q_learner = "grf"
 run_adr = T
 run_ipw = T
-run_aipw = F
+run_aipw = T
 run_q_learning = F # run Q-eval for each policy in the policy class
 run_q_opt = T # run Q-Opt to find the best policy (fitted-Q iteration)
 run_q_aipw_oracle = T # run AIPW and Q-eval for evaluating the oracle-found best policy
@@ -45,7 +45,7 @@ if (setup == "simu1") {
   if (cluster) {
     n = as.numeric(args[2])
   } else {
-    n = 10000
+    n = 1000
   }
   n_oracle_eval = 20000 #
   H=10 #
@@ -76,17 +76,19 @@ if (setup == "simu1") {
 } else if (setup == "simu2")  {
 
   source("simu2.R")
-  e_rct=F
-  treat_once = F
+  e_rct=F # Not used
+  treat_once = F # ?
   outcome_interest = "other"
   Q_max = T
   if (cluster) {
     n = as.numeric(args[2])
   } else {
-    n = 1000
+    n = 500 #1000
   }
-  n_oracle_eval = 20000 
-  H = 10 
+
+  n_oracle_eval = 20000
+  H = 2 #10
+  
   setup_params = list()
   if (cluster) {
     setup_params$obs_noise = as.numeric(args[3])
@@ -96,7 +98,9 @@ if (setup == "simu1") {
   } else {
     setup_params$obs_noise = 0
     setup_params$beta = 0.5
-    setup_params$sigma = 1
+    # setup_params$sigma = 1
+    setup_params$sigma_t1 = 150 # 1
+    setup_params$sigma_t2 = 60 # 1
     REPIDX = 1
   }
 
@@ -182,7 +186,7 @@ if (run_adr) {
      mu_now = get_est(data_static_normal, data_dynamic[data_dynamic$id %in% normal_idx,,drop=F], foldid[normal_idx], H, regress_type="mu_now", learner=mu_learner, outcome_interest=outcome_interest)
      mu_next_internal = get_est(data_static_normal, data_dynamic[data_dynamic$id %in% normal_idx,,drop=F], foldid[normal_idx], H, regress_type="mu_next_internal", learner=mu_learner, outcome_interest=outcome_interest, e_hat=e_hat_normal)
      d_hat = get_est(data_static_normal, data_dynamic[data_dynamic$id %in% normal_idx,,drop=F], foldid[normal_idx], H, regress_type="d", learner=d_learner, outcome_interest = outcome_interest)
-     mu_next = get_mu_next(data_static_normal, mu_next_internal, d_hat, H, outcome_interest=outcome_interest, mu_combined=F)
+     mu_next = get_mu_next(data_static_normal, mu_next_internal, d_hat, H, outcome_interest=outcome_interest)
      mu_final = get_mu_final(die_idx, live_idx, normal_idx, mu_now, mu_next, mu_next_internal, H)
      mu_now = mu_final$mu_now
      mu_next = mu_final$mu_next
@@ -192,7 +196,7 @@ if (run_adr) {
     mu_now = get_est(data_static, data_dynamic, foldid, H, regress_type="mu_now", learner=mu_learner, outcome_interest=outcome_interest)
     mu_next_internal = get_est(data_static, data_dynamic, foldid, H, regress_type="mu_next_internal", learner=mu_learner, outcome_interest=outcome_interest, e_hat=e_hat)
     d_hat = get_est(data_static, data_dynamic, foldid, H, regress_type="d", learner=d_learner, outcome_interest = outcome_interest)
-    mu_next = get_mu_next(data_static, mu_next_internal, d_hat, H, outcome_interest=outcome_interest, mu_combined=F)
+    mu_next = get_mu_next(data_static, mu_next_internal, d_hat, H, outcome_interest=outcome_interest)
   }
 
   adr_ret= adr(A_time = data_static$treat_start_time,
