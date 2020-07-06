@@ -7,6 +7,7 @@ library(RColorBrewer)
 source("simu_common.R")
 
 pal = brewer.pal(n = 8, name = "Dark2")
+
 get_policy_params = function() {
   params = cbind(0, -1, c(1:11)) # always treat, and never treat corresponding to the 1st and 11th policy here
   params = rbind(params, cbind(1,0, seq(-.5, 5, 0.5)))

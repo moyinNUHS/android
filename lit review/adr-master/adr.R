@@ -8,8 +8,10 @@ adr_hiv = function(A_time,
                    censor_prob,
                    traj_prob,
                    traj_after_prob_matrix){
+  
   n = dim(mu_now)[1]
   H = dim(mu_now)[2]
+  
   num_choices = max(A_choice)
 
   list_args <- Vectorize( function(a,b) c( as.list(a), as.list(b) ),

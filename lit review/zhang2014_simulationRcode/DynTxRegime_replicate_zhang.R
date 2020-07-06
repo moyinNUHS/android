@@ -9,8 +9,8 @@ library(DynTxRegime) #tutorial here - shiny::runGitHub('DynTxRegimeTutorial','Sh
 library(rgenoud)
 library(parallel)
 
-n = 2000
-niter = 1
+n = 1000
+niter = 10
 data_set = list()
 for (i in 1:niter){
   data_set[[i]] <- as.data.frame(generate(n = n))
@@ -74,7 +74,7 @@ foo = function (data) {
              regimes = list(regime1, regime2),
              data = data, response = data$Y, txName = c('A1', 'A2'),
              Domains = rbind(c(50, 500), c(50, 500)),
-             pop.size = 2000, 
+             pop.size = 500, 
              starting.values = c(250, 350))
 }
 
@@ -87,7 +87,7 @@ for (i in 1:niter){
 
 out = as.data.frame(matrix(unlist(coeffs), byrow = T, ncol = 2))
 colnames(out) = c('eta1', 'eta2')
-out 
+colMeans(out)
 
 ##Available methods
 # Coefficients of the regression objects

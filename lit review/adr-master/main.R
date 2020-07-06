@@ -47,8 +47,8 @@ if (setup == "simu1") {
   } else {
     n = 10000
   }
-  n_oracle_eval = 20000
-  H=10
+  n_oracle_eval = 20000 #
+  H=10 #
 
   setup_params = list()
   setup_params$z_prob = c(0.3, 0.3, 0.4)
@@ -85,8 +85,8 @@ if (setup == "simu1") {
   } else {
     n = 1000
   }
-  n_oracle_eval = 20000
-  H = 10
+  n_oracle_eval = 20000 
+  H = 10 
   setup_params = list()
   if (cluster) {
     setup_params$obs_noise = as.numeric(args[3])
